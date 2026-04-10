@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klactus Vintage — Random Pick</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #111;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      text-align: center;
+    }
+    .loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    a { color: #ccc; }
+  </style>
+</head>
+<body>
+  <div class="loader">
+    <div class="spinner"></div>
+    <p id="status">Finding you something cool&hellip;</p>
+  </div>
+
+  <script>
+    const STORE = 'https://klactusvintage.com';
+    const COLLECTION = '/collections/shop/products.json';
+    const LIMIT = 250;
+
+    async function fetchAllProducts() {
+      let page = 1;
+      let allProducts = [];
+
+      while (true) {
+        const res = await fetch(`${STORE}${COLLECTION}?limit=${LIMIT}&page=${page}`);
+        if (!res.ok) throw new Error(`Failed to fetch products (HTTP ${res.status})`);
+        const data = await res.json();
+        if (!data.products || data.products.length === 0) break;
+        allProducts = allProducts.concat(data.products);
+        if (data.products.length < LIMIT) break;
+        page++;
+      }
+
+      return allProducts;
+    }
+
+    (async () => {
+      try {
+        const products = await fetchAllProducts();
+
+        // Filter to only available products
+        const available = products.filter(p =>
+          p.variants && p.variants.some(v => v.available)
+        );
+
+        const pool = available.length > 0 ? available : products;
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+
+        window.location.href = `${STORE}/products/${pick.handle}`;
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status').innerHTML =
+          `Couldn't load products. <a href="${STORE}/collections/shop">Browse the shop instead &rarr;</a>`;
+      }
+    })();
+  </script>
+</body>
+</html>
